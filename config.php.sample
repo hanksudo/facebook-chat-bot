@@ -1,0 +1,6 @@
+<?php
+
+$app_id=''; // your app id
+$app_secret=''; // you app secret
+$uid = ''; // sender uid
+$recv_id = ''; // receiver uid

@@ -1,34 +1,37 @@
 <?php
-// Copyright 2004-present Facebook. All Rights Reserved.
+@include_once('config.php');
+require_once('lib.php');
 
-$STREAM_XML = '&lt;stream:stream '.
+$STREAM_XML = '<stream:stream '.
   'xmlns:stream="http://etherx.jabber.org/streams" '.
   'version="1.0" xmlns="jabber:client" to="chat.facebook.com" '.
   'xml:lang="en" xmlns:xml="http://www.w3.org/XML/1998/namespace">';
 
-$AUTH_XML = '&lt;auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" '.
-  'mechanism="X-FACEBOOK-PLATFORM"&gt;&lt;/auth&gt;';
+$AUTH_XML = '<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" '.
+  'mechanism="X-FACEBOOK-PLATFORM"></auth>';
 
-$CLOSE_XML = '&lt;/stream:stream&gt;';
+$CLOSE_XML = '</stream:stream>';
 
-$RESOURCE_XML = '&lt;iq type="set" id="3"&gt;'.
-  '&lt;bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">'.
-  '&lt;resource>fb_xmpp_script&lt;/resource>&lt;/bind>&lt;/iq>';
+$RESOURCE_XML = '<iq type="set" id="3">'.
+  '<bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">'.
+  '<resource>fb_xmpp_script</resource></bind></iq>';
 
-$SESSION_XML = '&lt;iq type="set" id="4" to="chat.facebook.com"&gt;'.
-  '&lt;session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>&lt;/iq>';
+$SESSION_XML = '<iq type="set" id="4" to="chat.facebook.com">'.
+  '<session xmlns="urn:ietf:params:xml:ns:xmpp-session"/></iq>';
 
-$START_TLS = '&lt;starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/&gt;';
+$START_TLS = '<starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls"/>';
 
+$MESSAGE_XML = '<message type="chat" from="-%s@chat.facebook.com" to="-%s@chat.facebook.com">'.
+  '<body>%s</body></message>';
 
 function open_connection($server) {
-  print "[INFO] Opening connection... ";
+  echo "[INFO] Opening connection... ";
 
   $fp = fsockopen($server, 5222, $errno, $errstr);
   if (!$fp) {
-    print "$errstr ($errno)&lt;br>";
+    echo "$errstr ($errno)<br>";
   } else {
-    print "connnection open&lt;br>";
+    echo "connnection open<br>";
   }
 
   return $fp;
@@ -86,8 +89,7 @@ function find_xmpp($fp,  $tag, $value=null, &$ret=null) {
   return false;
 }
 
-
-function xmpp_connect($options, $access_token) {
+function xmpp_connect($fp, $options, $access_token) {
   global $STREAM_XML, $AUTH_XML, $RESOURCE_XML, $SESSION_XML, $CLOSE_XML, $START_TLS;
 
   $fp = open_connection($options['server']);
@@ -141,8 +143,8 @@ function xmpp_connect($options, $access_token) {
   $response = http_build_query($resp_array);
 
   // sends the response and waits for success
-  $xml = '&lt;response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">'.
-    base64_encode($response).'&lt;/response>';
+  $xml = '<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">'.
+  base64_encode($response).'</response>';
   send_xml($fp, $xml);
   if (!find_xmpp($fp, 'SUCCESS')) {
     return false;
@@ -156,7 +158,7 @@ function xmpp_connect($options, $access_token) {
   if (!find_xmpp($fp, 'STREAM:FEATURES')) {
     return false;
   }
- send_xml($fp, $RESOURCE_XML);
+  send_xml($fp, $RESOURCE_XML);
   if (!find_xmpp($fp, 'JID')) {
     return false;
   }
@@ -165,15 +167,16 @@ function xmpp_connect($options, $access_token) {
     return false;
   }
 
-  // we made it!
-  send_xml($fp, $CLOSE_XML);
-  print ("Authentication complete&lt;br>");
-  fclose($fp);
+  echo ("Authentication complete<br>");
 
-  return true;
+  return $fp;
 }
 
-
+function xmpp_send_msg($fp, $options) {
+  global $CLOSE_XML, $MESSAGE_XML;
+  send_xml($fp, sprintf($MESSAGE_XML, $options['uid'], $options['recv_id'], $options['msg']));
+  send_xml($fp, $CLOSE_XML);
+}
 
 //Gets access_token with xmpp_login permission
 function get_access_token($app_id, $app_secret, $my_url){ 
@@ -183,44 +186,70 @@ function get_access_token($app_id, $app_secret, $my_url){
   if(empty($code)) {
     $dialog_url = "https://www.facebook.com/dialog/oauth?scope=xmpp_login".
      "&client_id=" . $app_id . "&redirect_uri=" . urlencode($my_url) ;
-    echo("&lt;script>top.location.href='" . $dialog_url . "'&lt;/script>");
+    echo("<script>top.location.href='" . $dialog_url . "'</script>");
   }
    $token_url = "https://graph.facebook.com/oauth/access_token?client_id="
     . $app_id . "&redirect_uri=" . urlencode($my_url) 
     . "&client_secret=" . $app_secret 
     . "&code=" . $code;
-   $access_token = file_get_contents($token_url);
+   $access_token = @file_get_contents($token_url);
     parse_str($access_token, $output);
 
     return($output['access_token']);
 }
 
 function _main() {
-  print "Test platform connect for XMPP&lt;br>";
-  $app_id='YOUR_APP_ID';
-  $app_secret='YOUR-APP_SECRET';
-  $my_url = "YOUR_APP_URL";
-  $uid = 'USER_ID';
-  $access_token = get_access_token($app_id,$app_secret,$my_url);
-  print "access_token: ".$access_token."&lt;br>";
+  global $app_id, $app_secret, $uid, $recv_id;
+  echo "<h2>Facebook Chat Bot</h2>";
+
+  if (isset($_GET['app_id']) && isset($_GET['app_id']) && isset($_GET['app_id'])) {
+    $app_id = $_GET['app_id'];
+    $app_secret = $_GET['app_secret'];
+    $uid = $_GET['uid'];
+  }
+
+  if (empty($uid) || empty($app_id) || empty($app_secret)) {
+    show_config_form();
+    exit();
+  }
+  
+  echo '<p>Trying to getting access_token ... ';
+
+  $access_token = get_access_token($app_id, $app_secret, current_url());
+  
+  if (empty($access_token)) {
+    unset($_GET['code']);
+    echo("<script>top.location.href='" . current_url(true) . '?' . http_build_query($_GET) . "'</script>");
+    exit();
+  }
+  echo 'Done.</p>';
+  echo 'access_token: '.$access_token.'<br>';
+
+  // TODO: list all user to send msg
+  if (empty($recv_id)) {
+    $recv_id = $uid;
+  }
 
   $options = array(
     'uid' => $uid,
     'app_id' => $app_id,
     'server' => 'chat.facebook.com',
-   );
+    'recv_id' => $recv_id,
+    'msg' => 'I am robot.'
+  );
 
-  // prints options used
-  print "server: ".$options['server']."&lt;br>";
-  print "uid: ".$options['uid']."&lt;br>";
-  print "app id: ".$options['app_id']."&lt;br>";
+  // list options used
+  list_array($options);
 
-  if (xmpp_connect($options, $access_token)) {
-    print "Done&lt;br>";
+  $fp = xmpp_connect($fp, $options, $access_token);
+
+  if ($fp) {
+    xmpp_send_msg($fp, $options);
   } else {
-    print "An error ocurred&lt;br>";
+    echo "An error ocurred<br>";
   }
 
+  fclose($fp);
 }
 
 _main();
