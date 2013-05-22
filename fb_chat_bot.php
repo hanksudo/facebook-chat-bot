@@ -89,7 +89,7 @@ function find_xmpp($fp,  $tag, $value=null, &$ret=null) {
   return false;
 }
 
-function xmpp_connect($fp, $options, $access_token) {
+function xmpp_connect($options, $access_token) {
   global $STREAM_XML, $AUTH_XML, $RESOURCE_XML, $SESSION_XML, $CLOSE_XML, $START_TLS;
 
   $fp = open_connection($options['server']);
@@ -202,10 +202,11 @@ function _main() {
   global $app_id, $app_secret, $uid, $recv_id;
   echo "<h2>Facebook Chat Bot</h2>";
 
-  if (isset($_GET['app_id']) && isset($_GET['app_id']) && isset($_GET['app_id'])) {
+  if (isset($_GET['app_id']) && isset($_GET['app_secret']) && isset($_GET['uid'])) {
     $app_id = $_GET['app_id'];
     $app_secret = $_GET['app_secret'];
     $uid = $_GET['uid'];
+    if (isset($_GET['recv_id'])) $recv_id = $_GET['recv_id'];
   }
 
   if (empty($uid) || empty($app_id) || empty($app_secret)) {
@@ -241,7 +242,7 @@ function _main() {
   // list options used
   list_array($options);
 
-  $fp = xmpp_connect($fp, $options, $access_token);
+  $fp = xmpp_connect($options, $access_token);
 
   if ($fp) {
     xmpp_send_msg($fp, $options);

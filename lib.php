@@ -3,7 +3,7 @@
 // get current url
 function current_url($no_qs=false) {
     $protocol = 'http';
-    if ($_SERVER["HTTPS"] == "on") {$protocol .= "s";}
+    if ( isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] == "on") {$protocol .= "s";}
     $url = $protocol."://";
 
     $url .= $_SERVER["SERVER_NAME"];
@@ -34,6 +34,7 @@ function show_config_form() {
     $form .= 'app_id: <input type="text" name="app_id" size="30"><br>';
     $form .= 'app_secret: <input type="text" name="app_secret" size="40"><br>';
     $form .= 'sender_uid: <input type="text" name="uid"><br>';
+    $form .= 'receiver_uid: <input type="text" name="recv_id"><br>';
     $form .= '<input type="submit">';
     $form .= '</form>';
     echo $form;
