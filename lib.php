@@ -31,9 +31,9 @@ function list_array($arr, $ip="")
 function show_config_form() {
     echo '<p>Note: Config empty! You can set all of there in config.php</p>';
     $form  = '<form action="" method="GET">';
-    $form .= 'app_id: <input type="text" name="app_id" size="30" value="168159906594120"><br>';
-    $form .= 'app_secret: <input type="text" name="app_secret" size="40" value="ecf9926685c36b611eff63f063083021"><br>';
-    $form .= 'sender_uid: <input type="text" name="uid" value="523169752"><br>';
+    $form .= 'app_id: <input type="text" name="app_id" size="30"><br>';
+    $form .= 'app_secret: <input type="text" name="app_secret" size="40"><br>';
+    $form .= 'sender_uid: <input type="text" name="uid"><br>';
     $form .= '<input type="submit">';
     $form .= '</form>';
     echo $form;
