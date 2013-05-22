@@ -190,7 +190,7 @@ function get_access_token($app_id, $app_secret, $my_url){
         "client_id=".$app_id."&redirect_uri=".urlencode($my_url).
         "&client_secret=" . $app_secret.
         "&code=" . $_REQUEST["code"];
-        
+
     $access_token = @file_get_contents($token_url);
     parse_str($access_token, $output);
 
@@ -237,7 +237,15 @@ function _main() {
     // if reciver empty, receiver will be sender.
     if (empty($recv_id)) $recv_id = $uid;
 
-      
+    // $json_friends = json_decode(file_get_contents('https://graph.facebook.com/me/friends?access_token='.$access_token));
+    // list_array($json_friends->data);
+    
+    _post();
+}
+
+function _post() {
+    global $app_id, $app_secret, $uid, $recv_id, $access_token;
+
     // connect to XMPP Authentication
     $server_options = array(
         'app_id' => $app_id,
@@ -250,7 +258,8 @@ function _main() {
         $msg_options = array(
             'uid' => $uid,
             'recv_id' => $recv_id,
-            'msg' => 'I am robot.'.date("Y-m-d H:i:s")
+            'msg' => 'Hi, I am robot. '.date("Y-m-d H:i:s").'
+             Source Code: https://github.com/hankwang/facebook-chat-bot/'
         );  
         xmpp_send_msg($fp, $msg_options);
     } else {
