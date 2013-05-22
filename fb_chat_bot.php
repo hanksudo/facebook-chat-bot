@@ -167,13 +167,16 @@ function xmpp_connect($options, $access_token) {
     return false;
   }
 
-  echo ("Authentication complete<br>");
+  echo ("<p>Authentication complete</p>");
 
   return $fp;
 }
 
 function xmpp_send_msg($fp, $options) {
   global $CLOSE_XML, $MESSAGE_XML;
+
+  echo 'Sent message: <strong>'.$options['msg'].'</strong>, from '.$options['uid'].' to '.$options['recv_id'];
+
   send_xml($fp, sprintf($MESSAGE_XML, $options['uid'], $options['recv_id'], $options['msg']));
   send_xml($fp, $CLOSE_XML);
 }
@@ -181,71 +184,71 @@ function xmpp_send_msg($fp, $options) {
 //Gets access_token with xmpp_login permission
 function get_access_token($app_id, $app_secret, $my_url){ 
 
-  $code = $_REQUEST["code"];
-
-  if(empty($code)) {
+  if( !isset($_REQUEST["code"]) && empty($_REQUEST["code"]) ) {
     $dialog_url = "https://www.facebook.com/dialog/oauth?scope=xmpp_login".
      "&client_id=" . $app_id . "&redirect_uri=" . urlencode($my_url) ;
     echo("<script>top.location.href='" . $dialog_url . "'</script>");
+    exit();
   }
    $token_url = "https://graph.facebook.com/oauth/access_token?client_id="
     . $app_id . "&redirect_uri=" . urlencode($my_url) 
     . "&client_secret=" . $app_secret 
-    . "&code=" . $code;
-   $access_token = @file_get_contents($token_url);
+    . "&code=" . $_REQUEST["code"];
+    $access_token = @file_get_contents($token_url);
     parse_str($access_token, $output);
 
     return($output['access_token']);
 }
 
 function _main() {
-  global $app_id, $app_secret, $uid, $recv_id;
-  echo "<h2>Facebook Chat Bot</h2>";
-
-  if (isset($_GET['app_id']) && isset($_GET['app_secret']) && isset($_GET['uid'])) {
-    $app_id = $_GET['app_id'];
-    $app_secret = $_GET['app_secret'];
-    $uid = $_GET['uid'];
+    global $app_id, $app_secret, $uid, $recv_id, $access_token;
+    echo "<h2>Facebook Chat Bot</h2>";
+  
+    if (isset($_GET['app_id'])) $app_id = $_GET['app_id'];
+    if (isset($_GET['app_secret'])) $app_secret = $_GET['app_secret'];
+    if (isset($_GET['uid'])) $uid = $_GET['uid'];
     if (isset($_GET['recv_id'])) $recv_id = $_GET['recv_id'];
-  }
 
-  if (empty($uid) || empty($app_id) || empty($app_secret)) {
-    show_config_form();
-    exit();
-  }
+    if ( empty($app_id) || empty($app_secret) ) {
+        show_config_form();
+        exit();
+    }
   
-  echo '<p>Trying to getting access_token ... ';
+    if ( !isset($access_token) || empty($access_token) ) {
+      echo '<p>Trying to getting access_token ... ';
 
-  $access_token = get_access_token($app_id, $app_secret, current_url());
+      $access_token = get_access_token($app_id, $app_secret, current_url());
+
+      if (empty($access_token)) {
+        unset($_GET['code']);
+        echo("<script>top.location.href='" . current_url(true) . '?' . http_build_query($_GET) . "'</script>");
+        exit();
+      }
+      echo 'Done.</p>';
+      echo '<p>access_token: '.$access_token.'</p>';
+  }
+  // get Facebook /me
+  if (empty($uid)) {
+    $json_me = json_decode(file_get_contents('https://graph.facebook.com/me?access_token='.$access_token));
+    $uid = $json_me->id;
+    echo "<p>uid empty, get uid from Graph API. uid= ".$uid."</p>";
+  }
+
+  if (empty($recv_id)) $recv_id = $uid;
   
-  if (empty($access_token)) {
-    unset($_GET['code']);
-    echo("<script>top.location.href='" . current_url(true) . '?' . http_build_query($_GET) . "'</script>");
-    exit();
-  }
-  echo 'Done.</p>';
-  echo 'access_token: '.$access_token.'<br>';
-
-  // TODO: list all user to send msg
-  if (empty($recv_id)) {
-    $recv_id = $uid;
-  }
-
-  $options = array(
-    'uid' => $uid,
+  $server_options = array(
     'app_id' => $app_id,
-    'server' => 'chat.facebook.com',
-    'recv_id' => $recv_id,
-    'msg' => 'I am robot.'
+    'server' => 'chat.facebook.com'
   );
-
-  // list options used
-  list_array($options);
-
-  $fp = xmpp_connect($options, $access_token);
+  $fp = xmpp_connect($server_options, $access_token);
 
   if ($fp) {
-    xmpp_send_msg($fp, $options);
+    $msg_options = array(
+        'uid' => $uid,
+        'recv_id' => $recv_id,
+        'msg' => 'I am robot.'.date("Y-m-d H:i:s")
+    );  
+    xmpp_send_msg($fp, $msg_options);
   } else {
     echo "An error ocurred<br>";
   }
