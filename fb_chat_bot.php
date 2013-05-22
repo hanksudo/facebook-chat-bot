@@ -215,45 +215,45 @@ function _main() {
     }
   
     if ( !isset($access_token) || empty($access_token) ) {
-      echo '<p>Trying to getting access_token ... ';
+        echo '<p>Trying to getting access_token ... ';
 
-      $access_token = get_access_token($app_id, $app_secret, current_url());
+        $access_token = get_access_token($app_id, $app_secret, current_url());
 
-      if (empty($access_token)) {
-        unset($_GET['code']);
-        echo("<script>top.location.href='" . current_url(true) . '?' . http_build_query($_GET) . "'</script>");
-        exit();
-      }
-      echo 'Done.</p>';
-      echo '<p>access_token: '.$access_token.'</p>';
-  }
-  // get Facebook /me
-  if (empty($uid)) {
-    $json_me = json_decode(file_get_contents('https://graph.facebook.com/me?access_token='.$access_token));
-    $uid = $json_me->id;
-    echo "<p>uid empty, get uid from Graph API. uid= ".$uid."</p>";
-  }
+        if (empty($access_token)) {
+            unset($_GET['code']);
+            echo("<script>top.location.href='" . current_url(true) . '?' . http_build_query($_GET) . "'</script>");
+            exit();
+        }
+        echo 'Done.</p>';
+        echo '<p>access_token: '.$access_token.'</p>';
+    }
+    // get Facebook /me
+    if (empty($uid)) {
+        $json_me = json_decode(file_get_contents('https://graph.facebook.com/me?access_token='.$access_token));
+        $uid = $json_me->id;
+        echo "<p>uid empty, get uid from Graph API. uid= ".$uid."</p>";
+    }
 
-  if (empty($recv_id)) $recv_id = $uid;
+    if (empty($recv_id)) $recv_id = $uid;
   
-  $server_options = array(
-    'app_id' => $app_id,
-    'server' => 'chat.facebook.com'
-  );
-  $fp = xmpp_connect($server_options, $access_token);
+    $server_options = array(
+        'app_id' => $app_id,
+        'server' => 'chat.facebook.com'
+    );
+    $fp = xmpp_connect($server_options, $access_token);
 
-  if ($fp) {
-    $msg_options = array(
-        'uid' => $uid,
-        'recv_id' => $recv_id,
-        'msg' => 'I am robot.'.date("Y-m-d H:i:s")
-    );  
-    xmpp_send_msg($fp, $msg_options);
-  } else {
-    echo "An error ocurred<br>";
-  }
+    if ($fp) {
+        $msg_options = array(
+            'uid' => $uid,
+            'recv_id' => $recv_id,
+            'msg' => 'I am robot.'.date("Y-m-d H:i:s")
+        );  
+        xmpp_send_msg($fp, $msg_options);
+    } else {
+        echo "An error ocurred<br>";
+    }
 
-  fclose($fp);
+    fclose($fp);
 }
 
 _main();
